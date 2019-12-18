@@ -6,15 +6,52 @@ services:
   kdc-kadmin:
     build: ./kdc-kadmin
     env_file: kerberos.env
+    domainname: pxf.greenplum.internal
+    hostname: kdc
+    ports:
+      - "88:88/tcp"
+      - "88:88/udp"
+      - "749:749/tcp"
+      - "749:749/udp"
+      - "750:750/tcp"
+      - "750:750/udp"
     volumes:
       # This is needed otherwise there won't be enough entropy to generate a new kerberos realm
       - /dev/urandom:/dev/random
+      - /private/var/data/db2_compose/keytabs:/keytabs
 
   kerberos-client:
     build: ./kerberos-client
     env_file: kerberos.env
     depends_on:
       - kdc-kadmin
+
+  db2:
+    env_file: db2.env
+    image: ibmcom/db2
+    container_name: pxfdb2
+    domainname: pxf.greenplum.internal
+    hostname: db2
+    ports:
+      - "50000:50000"
+    privileged: true
+    volumes:
+      - /private/var/data/db2_compose:/database
+    depends_on:
+      - kdc-kadmin
+
+
+
+#  docker run -itd \
+#  --name mydb2 \
+#  --privileged=true \
+#  -p 50000:50000 \
+#  -e LICENSE=accept \
+#  -e DB2INST1_PASSWORD=choose-your-password \
+#  -e DBNAME=testdb \
+#  -v /private/var/data/db2:/database \
+#  ibmcom/db2
+
 
 # NOTE:
 #  "env_file: kerberos.env" is optional.
